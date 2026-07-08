@@ -98,15 +98,14 @@ protected:
   bool MadeChange;
   UniformityInfo *UA = nullptr;
 
-  // When set, UniformityInfo is not fetched in run(). This is used by the
-  // legacy pass manager, which cannot provide the required analyses.
-  bool SkipUniformityAnalysis;
-
 public:
-  ReassociatePass(bool SkipUniformityAnalysis = false)
-      : SkipUniformityAnalysis(SkipUniformityAnalysis) {}
-
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+
+  // Runs the reassociation algorithm. \p UI carries uniformity information when
+  // available (e.g. on targets with branch divergence) and may be null. Both
+  // the new and legacy pass managers funnel through here after acquiring the
+  // analysis in their respective ways.
+  LLVM_ABI PreservedAnalyses runImpl(Function &F, UniformityInfo *UI = nullptr);
 
 private:
   void BuildRankMap(Function &F, ReversePostOrderTraversal<Function *> &RPOT);

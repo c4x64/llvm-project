@@ -2574,12 +2574,19 @@ ReassociatePass::BuildPairMap(ReversePostOrderTraversal<Function *> &RPOT) {
 PreservedAnalyses ReassociatePass::run(Function &F,
                                        FunctionAnalysisManager &AM) {
   // On targets with branch divergence, obtain UniformityInfo so we can group
-  // uniform operands together in expression trees.
-  if (!SkipUniformityAnalysis) {
-    const TargetTransformInfo &TTI = AM.getResult<TargetIRAnalysis>(F);
-    if (TTI.hasBranchDivergence(&F))
-      UA = &AM.getResult<UniformityInfoAnalysis>(F);
-  }
+  // uniform operands together in expression trees. TargetTransformInfo is only
+  // queried to gate this on hasBranchDivergence(): targets without divergence
+  // (the common case) never compute UniformityInfo and pay no extra cost.
+  UniformityInfo *UI = nullptr;
+  const TargetTransformInfo &TTI = AM.getResult<TargetIRAnalysis>(F);
+  if (TTI.hasBranchDivergence(&F))
+    UI = &AM.getResult<UniformityInfoAnalysis>(F);
+
+  return runImpl(F, UI);
+}
+
+PreservedAnalyses ReassociatePass::runImpl(Function &F, UniformityInfo *UI) {
+  UA = UI;
 
   // Get the functions basic blocks in Reverse Post Order. This order is used by
   // BuildRankMap to pre calculate ranks correctly. It also excludes dead basic
@@ -2667,8 +2674,7 @@ class ReassociateLegacyPass : public FunctionPass {
 public:
   static char ID; // Pass identification, replacement for typeid
 
-  ReassociateLegacyPass()
-      : FunctionPass(ID), Impl(/*SkipUniformityAnalysis=*/true) {
+  ReassociateLegacyPass() : FunctionPass(ID) {
     initializeReassociateLegacyPassPass(*PassRegistry::getPassRegistry());
   }
 
@@ -2676,13 +2682,23 @@ public:
     if (skipFunction(F))
       return false;
 
-    FunctionAnalysisManager DummyFAM;
-    auto PA = Impl.run(F, DummyFAM);
+    // On targets with branch divergence, provide UniformityInfo so uniform
+    // operands can be grouped together; other targets pass null.
+    const TargetTransformInfo &TTI =
+        getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
+    UniformityInfo *UI =
+        TTI.hasBranchDivergence(&F)
+            ? &getAnalysis<UniformityInfoWrapperPass>().getUniformityInfo()
+            : nullptr;
+
+    PreservedAnalyses PA = Impl.runImpl(F, UI);
     return !PA.areAllPreserved();
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
+    AU.addRequired<TargetTransformInfoWrapperPass>();
+    AU.addRequired<UniformityInfoWrapperPass>();
     AU.addPreserved<AAResultsWrapperPass>();
     AU.addPreserved<BasicAAWrapperPass>();
     AU.addPreserved<GlobalsAAWrapperPass>();
@@ -2693,8 +2709,12 @@ public:
 
 char ReassociateLegacyPass::ID = 0;
 
-INITIALIZE_PASS(ReassociateLegacyPass, "reassociate",
-                "Reassociate expressions", false, false)
+INITIALIZE_PASS_BEGIN(ReassociateLegacyPass, "reassociate",
+                      "Reassociate expressions", false, false)
+INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(UniformityInfoWrapperPass)
+INITIALIZE_PASS_END(ReassociateLegacyPass, "reassociate",
+                    "Reassociate expressions", false, false)
 
 // Public interface to the Reassociate pass
 FunctionPass *llvm::createReassociatePass() {
