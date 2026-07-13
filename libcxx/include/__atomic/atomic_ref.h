@@ -259,6 +259,8 @@ struct atomic_ref : public __atomic_ref_base<_Tp> {
         "atomic_ref ctor: referenced object must be aligned to required_alignment");
   }
 
+  _LIBCPP_HIDE_FROM_ABI explicit atomic_ref(_Tp&&) = delete;
+
   _LIBCPP_HIDE_FROM_ABI atomic_ref(const atomic_ref&) noexcept = default;
 
   _LIBCPP_HIDE_FROM_ABI _Tp operator=(_Tp __desired) const noexcept { return __base::operator=(__desired); }
@@ -278,6 +280,8 @@ struct atomic_ref<_Tp> : public __atomic_ref_base<_Tp> {
         std::__is_sufficiently_aligned<__base::required_alignment>(std::addressof(__obj)),
         "atomic_ref ctor: referenced object must be aligned to required_alignment");
   }
+
+  _LIBCPP_HIDE_FROM_ABI explicit atomic_ref(_Tp&&) = delete;
 
   _LIBCPP_HIDE_FROM_ABI atomic_ref(const atomic_ref&) noexcept = default;
 
@@ -351,6 +355,8 @@ struct atomic_ref<_Tp> : public __atomic_ref_base<_Tp> {
         "atomic_ref ctor: referenced object must be aligned to required_alignment");
   }
 
+  _LIBCPP_HIDE_FROM_ABI explicit atomic_ref(_Tp&&) = delete;
+
   _LIBCPP_HIDE_FROM_ABI atomic_ref(const atomic_ref&) noexcept = default;
 
   _LIBCPP_HIDE_FROM_ABI _Tp operator=(_Tp __desired) const noexcept { return __base::operator=(__desired); }
@@ -393,6 +399,8 @@ struct atomic_ref<_Tp*> : public __atomic_ref_base<_Tp*> {
   using difference_type = ptrdiff_t;
 
   _LIBCPP_HIDE_FROM_ABI explicit atomic_ref(_Tp*& __ptr) : __base(__ptr) {}
+
+  _LIBCPP_HIDE_FROM_ABI explicit atomic_ref(_Tp*&&) = delete;
 
   _LIBCPP_HIDE_FROM_ABI _Tp* operator=(_Tp* __desired) const noexcept { return __base::operator=(__desired); }
 
