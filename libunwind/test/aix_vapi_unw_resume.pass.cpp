@@ -50,6 +50,7 @@ extern "C" int cmp(const void *pa, const void *pb) {
   fprintf(
       stderr,
       "Populate global cursors for `bsearch`, `bsearch_caller`, and `main`.\n");
+  // CHECK-LABEL: Populate global cursors
   unw_context_t context;
   unw_cursor_t cursor;
   unw_getcontext(&context);
@@ -69,6 +70,7 @@ extern "C" int cmp(const void *pa, const void *pb) {
           "Return to `bsearch` with r3 set to 0 using the global cursor.\n");
   unw_set_reg(&bsearch_cursor, R3, (unw_word_t)0);
   unw_resume(&bsearch_cursor);
+  // CHECK-LABEL: Return to `bsearch`
 }
 
 char bsearch_caller_ret;
@@ -89,6 +91,8 @@ void *bsearch_caller(void) {
             state);
     unw_set_reg(&bsearch_caller_cursor, R3, (unw_word_t)&buf[state]);
     unw_resume(&bsearch_caller_cursor);
+    // CHECK-LABEL: Return to `bsearch_caller` {{.*}}&buf[1]
+    // CHECK-LABEL: Return to `bsearch_caller` {{.*}}&buf[2]
   }
 
   // Test resuming context where VAPI is not active, one frame up from the VAPI
@@ -97,6 +101,7 @@ void *bsearch_caller(void) {
                   "r3 set to `&bsearch_caller_ret` using the global cursor.\n");
   unw_set_reg(&main_cursor, R3, (unw_word_t)&bsearch_caller_ret);
   unw_resume(&main_cursor);
+  // CHECK-LABEL: Return to `main`
 }
 
 int main(void) {
