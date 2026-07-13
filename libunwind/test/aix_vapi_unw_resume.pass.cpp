@@ -68,6 +68,7 @@ extern "C" int cmp(const void *pa, const void *pb) {
   // Step from `bsearch_caller` up to `main`.
   unw_step(&cursor);
   // CHECK-LABEL: libunwind: stepWithTBTable: Look up traceback table of func=_Z14bsearch_callerv
+  // CHECK-NOT: VAPI
   main_cursor = cursor;
 
   // Test resuming context where VAPI is active.
