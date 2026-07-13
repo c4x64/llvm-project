@@ -12,8 +12,10 @@
 #include "hdr/func/free.h"
 #include "hdr/func/malloc.h"
 #include "hdr/func/realloc.h"
+#include "hdr/stdint_proxy.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/integer_to_string.h" // IntegerToString
+#include "src/__support/libc_assert.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/null_check.h"
 #include "src/string/memory_utils/inline_memcpy.h"
@@ -61,6 +63,15 @@ private:
       buffer_[size_] = NULL_CHARACTER;
   }
 
+  // Whether addr lies within this string's content.
+  LIBC_INLINE bool addr_in_string_bounds(const char *addr) {
+    uintptr_t begin_uint = reinterpret_cast<uintptr_t>(begin());
+    uintptr_t addr_uint = reinterpret_cast<uintptr_t>(addr);
+    uintptr_t end_uint = reinterpret_cast<uintptr_t>(end());
+
+    return begin_uint <= addr_uint && addr_uint < end_uint;
+  }
+
 public:
   LIBC_INLINE constexpr string() {}
   LIBC_INLINE string(const string &other) { this->operator+=(other); }
@@ -83,8 +94,7 @@ public:
   }
 
   LIBC_INLINE string &operator=(const string &other) {
-    resize(0);
-    return (*this) += other;
+    return (*this) = string_view(other);
   }
 
   LIBC_INLINE string &operator=(char other) {
@@ -103,8 +113,11 @@ public:
     return *this;
   }
 
-  LIBC_INLINE string &operator=(const string_view &view) {
-    return *this = string(view);
+  LIBC_INLINE string &operator=(string_view view) {
+    LIBC_ASSERT(!addr_in_string_bounds(view.data()));
+
+    resize(0);
+    return (*this) += view;
   }
 
   LIBC_INLINE ~string() {
@@ -189,7 +202,9 @@ public:
     return res;
   }
 
-  LIBC_INLINE string &operator+=(const string &rhs) {
+  LIBC_INLINE string &operator+=(string_view rhs) {
+    LIBC_ASSERT(!addr_in_string_bounds(rhs.data()));
+
     const size_t new_size = size_ + rhs.size();
     reserve(new_size);
     inline_memcpy(buffer_ + size_, rhs.data(), rhs.size());
@@ -198,11 +213,7 @@ public:
   }
 
   LIBC_INLINE string &operator+=(const char c) {
-    const size_t new_size = size_ + 1;
-    reserve(new_size);
-    buffer_[size_] = c;
-    set_size_and_add_null_character(new_size);
-    return *this;
+    return *this += string_view(&c, 1);
   }
 };
 
