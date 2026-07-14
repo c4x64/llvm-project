@@ -29,7 +29,6 @@ enum class NodeKind {
   eIdentifierNode,
   eIntegerLiteralNode,
   eMemberOfNode,
-  ePointerLiteralNode,
   eUnaryOpNode,
 };
 
@@ -298,18 +297,6 @@ private:
   bool m_value;
 };
 
-class PointerLiteralNode : public ASTNode {
-public:
-  PointerLiteralNode(uint32_t location)
-      : ASTNode(location, NodeKind::ePointerLiteralNode) {}
-
-  llvm::Expected<lldb::ValueObjectSP> Accept(Visitor *v) const override;
-
-  static bool classof(const ASTNode &node) {
-    return node.GetKind() == NodeKind::ePointerLiteralNode;
-  }
-};
-
 class CastNode : public ASTNode {
 public:
   CastNode(uint32_t location, CompilerType type, ASTNodeUP operand,
@@ -358,8 +345,6 @@ public:
   Visit(const FloatLiteralNode &node) = 0;
   virtual llvm::Expected<lldb::ValueObjectSP>
   Visit(const BooleanLiteralNode &node) = 0;
-  virtual llvm::Expected<lldb::ValueObjectSP>
-  Visit(const PointerLiteralNode &node) = 0;
   virtual llvm::Expected<lldb::ValueObjectSP> Visit(const CastNode &node) = 0;
 };
 

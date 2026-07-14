@@ -23,7 +23,7 @@ class TestFrameVarDILLiterals(TestBase):
         self.expect_var_path("true", value="true", type="bool")
         self.expect_var_path("false", value="false", type="bool")
 
-        # Check nullptr literal parsing
+        # Check nullptr identifier
         frame = thread.GetFrameAtIndex(0)
         nullptr = frame.GetValueForVariablePath("nullptr")
         nullptr_value = "0x" + "00" * self.target().GetAddressByteSize()

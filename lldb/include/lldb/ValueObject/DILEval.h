@@ -72,8 +72,6 @@ private:
   Visit(const FloatLiteralNode &node) override;
   llvm::Expected<lldb::ValueObjectSP>
   Visit(const BooleanLiteralNode &node) override;
-  llvm::Expected<lldb::ValueObjectSP>
-  Visit(const PointerLiteralNode &node) override;
   llvm::Expected<lldb::ValueObjectSP> Visit(const CastNode &node) override;
 
   /// Perform usual unary conversions on a value. At the moment this

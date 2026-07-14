@@ -37,7 +37,6 @@ public:
     integer_constant,
     kw_false,
     kw_true,
-    kw_nullptr,
     l_paren,
     l_square,
     lessless,

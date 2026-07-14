@@ -99,7 +99,6 @@ private:
   ASTNodeUP ParseIntegerLiteral();
   ASTNodeUP ParseFloatingPointLiteral();
   ASTNodeUP ParseBooleanLiteral();
-  ASTNodeUP ParsePointerLiteral();
 
   ASTNodeUP ParseCastExpression();
   std::optional<CompilerType> ParseBuiltinType();

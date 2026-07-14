@@ -459,6 +459,21 @@ Interpreter::Visit(const IdentifierNode &node) {
   if (!identifier)
     identifier = LookupEnumValue(node.GetName(), m_stack_frame);
 
+  if (!identifier && node.GetName() == "nullptr") {
+    // If we got a "nullptr" identifier, and there is no defined variable with
+    // this name, resolve it as a null pointer.
+    llvm::Expected<lldb::TypeSystemSP> type_system =
+        GetTypeSystemFromCU(m_stack_frame);
+    if (!type_system)
+      return type_system.takeError();
+    type_system.get()->GetPointerByteSize();
+    llvm::APInt value(type_system.get()->GetPointerByteSize() * CHAR_BIT, 0);
+    Scalar scalar(value);
+    CompilerType type = GetBasicType(*type_system, lldb::eBasicTypeNullPtr);
+    return ValueObject::CreateValueObjectFromScalar(m_stack_frame, scalar, type,
+                                                    "result");
+  }
+
   if (!identifier) {
     std::string errMsg =
         llvm::formatv("use of undeclared identifier '{0}'", node.GetName());
@@ -1380,20 +1395,6 @@ Interpreter::Visit(const BooleanLiteralNode &node) {
     return type_system.takeError();
   return ValueObject::CreateValueObjectFromBool(m_stack_frame, *type_system,
                                                 value, "result");
-}
-
-llvm::Expected<lldb::ValueObjectSP>
-Interpreter::Visit(const PointerLiteralNode &node) {
-  llvm::Expected<lldb::TypeSystemSP> type_system =
-      GetTypeSystemFromCU(m_stack_frame);
-  if (!type_system)
-    return type_system.takeError();
-  type_system.get()->GetPointerByteSize();
-  llvm::APInt ptr_value(type_system.get()->GetPointerByteSize() * CHAR_BIT, 0);
-  Scalar scalar(ptr_value);
-  CompilerType type = GetBasicType(*type_system, lldb::eBasicTypeNullPtr);
-  return ValueObject::CreateValueObjectFromScalar(m_stack_frame, scalar, type,
-                                                  "result");
 }
 
 llvm::Expected<CastKind>

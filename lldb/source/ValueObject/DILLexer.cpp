@@ -44,8 +44,6 @@ llvm::StringRef Token::GetTokenName(Kind kind) {
     return "false";
   case Kind::kw_true:
     return "true";
-  case Token::kw_nullptr:
-    return "nullptr";
   case Kind::l_paren:
     return "l_paren";
   case Kind::l_square:
@@ -192,7 +190,6 @@ llvm::Expected<Token> DILLexer::Lex(llvm::StringRef expr,
     Token::Kind kind = llvm::StringSwitch<Token::Kind>(word)
                            .Case("false", Token::kw_false)
                            .Case("true", Token::kw_true)
-                           .Case("nullptr", Token::kw_nullptr)
                            .Default(Token::identifier);
     return Token(kind, word.str(), position);
   }
