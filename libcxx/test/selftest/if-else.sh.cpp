@@ -8,4 +8,4 @@
 
 // Make sure that LIT `%if` substitutions are aware of the available features.
 
-// RUN: not %if libcpp-abi-version={{[0-9]+}} %{ not %} echo "hello world"
+// RUN: not %if target={{.+}} %{ not %} echo "hello world"
