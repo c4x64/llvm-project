@@ -43,6 +43,44 @@ end subroutine
 ! CHECK:         cf.cond_br
 ! CHECK:         return
 
+! Multiway branch (computed GO TO) inside a DO with a target that escapes
+! the loop: not wrapped. Only the first target of a computed GO TO used to
+! be considered by the wrappability check, so an escaping non-first label
+! (99 below) was invisible and the DO was wrapped; the resulting
+! scf.execute_region contained a fir.select whose successor lived outside
+! the region, tripping MLIR's op verifier.
+subroutine not_wrapped_computed_goto_exit(sel, a)
+  integer :: sel, a, i
+  do i = 1, 10
+    go to (10, 99), sel
+10 end do
+  a = -1
+99 continue
+end subroutine
+
+! CHECK-LABEL: func.func @_QPnot_wrapped_computed_goto_exit
+! CHECK-NOT:     scf.execute_region
+! CHECK:         fir.select
+! CHECK:         return
+
+! Same shape via an arithmetic IF. Arithmetic IF has three label targets;
+! only the first was recorded on the source Evaluation, so a non-first
+! escape target (99) was again invisible to the wrappability check.
+subroutine not_wrapped_arithmetic_if_exit(x, a)
+  integer :: a, i
+  real :: x
+  do i = 1, 10
+    if (x) 10, 10, 99
+10 end do
+  a = -1
+99 continue
+end subroutine
+
+! CHECK-LABEL: func.func @_QPnot_wrapped_arithmetic_if_exit
+! CHECK-NOT:     scf.execute_region
+! CHECK:         cf.cond_br
+! CHECK:         return
+
 ! A plain, structured DO with no early exits: lowered as fir.do_loop,
 ! never reaches the wrap path (the loop is not unstructured at all).
 subroutine structured(n, a)

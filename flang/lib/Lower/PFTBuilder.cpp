@@ -2398,13 +2398,23 @@ static bool isInsideConstruct(const Fortran::lower::pft::Evaluation *target,
 
 bool Fortran::lower::pft::branchesAreInternal(
     const Fortran::lower::pft::Evaluation &construct) {
+  auto targetIsInternal = [&](const Fortran::lower::pft::Evaluation *target) {
+    return isInsideConstruct(target, construct, /*strict=*/false);
+  };
   std::function<bool(const Fortran::lower::pft::EvaluationList &)> walk =
       [&](const Fortran::lower::pft::EvaluationList &list) -> bool {
     for (const Fortran::lower::pft::Evaluation &nested : list) {
-      if (nested.controlSuccessor &&
-          !isInsideConstruct(nested.controlSuccessor, construct,
-                             /*strict=*/false))
+      if (nested.controlSuccessor && !targetIsInternal(nested.controlSuccessor))
         return false;
+
+      // Multiway branches (computed GO TO, arithmetic IF) record only the
+      // first target in controlSuccessor; the remaining targets are held in
+      // extraControlSuccessors and must be checked here as well or an
+      // escaping branch will silently slip through.
+      for (const Fortran::lower::pft::Evaluation *extra :
+           nested.extraControlSuccessors)
+        if (!targetIsInternal(extra))
+          return false;
 
       if (nested.evaluationList && !walk(*nested.evaluationList))
         return false;
@@ -2428,13 +2438,20 @@ hasIncomingBranch(const Fortran::lower::pft::Evaluation &construct) {
   if (!funit)
     return false;
 
+  auto targetIsStrictlyInside = [&](const Fortran::lower::pft::Evaluation *t) {
+    return isInsideConstruct(t, construct, /*strict=*/true);
+  };
   std::function<bool(const Fortran::lower::pft::EvaluationList &)> walk =
       [&](const Fortran::lower::pft::EvaluationList &list) -> bool {
     for (const Fortran::lower::pft::Evaluation &e : list) {
-      if (!isInsideConstruct(&e, construct, /*strict=*/true) &&
-          e.controlSuccessor &&
-          isInsideConstruct(e.controlSuccessor, construct, /*strict=*/true))
-        return true;
+      if (!isInsideConstruct(&e, construct, /*strict=*/true)) {
+        if (e.controlSuccessor && targetIsStrictlyInside(e.controlSuccessor))
+          return true;
+        for (const Fortran::lower::pft::Evaluation *extra :
+             e.extraControlSuccessors)
+          if (targetIsStrictlyInside(extra))
+            return true;
+      }
 
       if (e.evaluationList && walk(*e.evaluationList))
         return true;
