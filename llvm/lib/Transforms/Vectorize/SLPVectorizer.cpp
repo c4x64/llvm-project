@@ -1302,7 +1302,7 @@ public:
       return AltOp;
     // BinOpSameOpcodeHelper only models interchangeable BinaryOperators, so a
     // non-BinaryOperator MainOp (e.g. a call) cannot match here.
-    if (!I->isBinaryOp() || !isa<BinaryOperator>(MainOp))
+    if (!I->isBinaryOp() || !MainOp->isBinaryOp())
       return nullptr;
     BinOpSameOpcodeHelper Converter(MainOp);
     if (!Converter.add(I) || !Converter.add(MainOp))
@@ -1383,7 +1383,7 @@ public:
       return false;
     // BinOpSameOpcodeHelper only models interchangeable BinaryOperators, so a
     // non-BinaryOperator MainOp (e.g. a call) is unconditionally copyable.
-    if (!I->isBinaryOp() || !isa<BinaryOperator>(MainOp))
+    if (!I->isBinaryOp() || !MainOp->isBinaryOp())
       return true;
     BinOpSameOpcodeHelper Converter(MainOp);
     return !Converter.add(I) || !Converter.add(MainOp) ||
