@@ -1269,16 +1269,15 @@ public:
   /// Some of the instructions in the list have alternate opcodes.
   bool isAltShuffle() const { return getMainOp() != getAltOp(); }
 
-  /// Checks if \p I is the same operation as \p Op: same opcode, and, for
-  /// calls, the same intrinsic ID. All calls share the Call opcode regardless
-  /// of callee, so e.g. llvm.umax and llvm.smax are not the same operation
-  /// even though `getOpcode()` cannot tell them apart.
+  /// Checks if \p I is the same operation as \p Op, distinguishing calls by
+  /// intrinsic ID (all calls share the Call opcode, so e.g. umax != smax).
   static bool isSameOperation(const Instruction *I, const Instruction *Op) {
     if (I->getOpcode() != Op->getOpcode())
       return false;
-    if (const auto *IOp = dyn_cast<IntrinsicInst>(Op))
-      if (const auto *II = dyn_cast<IntrinsicInst>(I))
-        return II->getIntrinsicID() == IOp->getIntrinsicID();
+    const auto *II = dyn_cast<IntrinsicInst>(I);
+    const auto *IOp = dyn_cast<IntrinsicInst>(Op);
+    if (II || IOp)
+      return II && IOp && II->getIntrinsicID() == IOp->getIntrinsicID();
     return true;
   }
 
@@ -1300,8 +1299,7 @@ public:
     assert(AltOp && "AltOp cannot be nullptr.");
     if (isSameOperation(I, AltOp))
       return AltOp;
-    // BinOpSameOpcodeHelper only models interchangeable BinaryOperators, so a
-    // non-BinaryOperator MainOp (e.g. a call) cannot match here.
+    // BinOpSameOpcodeHelper handles only BinaryOperators; a call cannot match.
     if (!I->isBinaryOp() || !MainOp->isBinaryOp())
       return nullptr;
     BinOpSameOpcodeHelper Converter(MainOp);
@@ -1381,8 +1379,7 @@ public:
       return true;
     if (isSameOperation(I, MainOp))
       return false;
-    // BinOpSameOpcodeHelper only models interchangeable BinaryOperators, so a
-    // non-BinaryOperator MainOp (e.g. a call) is unconditionally copyable.
+    // BinOpSameOpcodeHelper handles only BinaryOperators; a call is copyable.
     if (!I->isBinaryOp() || !MainOp->isBinaryOp())
       return true;
     BinOpSameOpcodeHelper Converter(MainOp);
@@ -1477,8 +1474,7 @@ convertTo(Instruction *I, const InstructionsState &S) {
     BinOpSameOpcodeHelper Converter(I);
     return std::make_pair(SelectedOp, Converter.getOperand(SelectedOp));
   }
-  // CallInst::operands() also includes the called function itself as a
-  // trailing operand, which is not a real argument; use args() instead.
+  // Use args() to skip the trailing callee operand in CallInst::operands().
   if (auto *CI = dyn_cast<CallInst>(I))
     return std::make_pair(SelectedOp, SmallVector<Value *>(CI->args()));
   return std::make_pair(SelectedOp, SmallVector<Value *>(I->operands()));
@@ -9592,6 +9588,17 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
           reorderReuses(Gather->ReuseShuffleIndices, Mask);
           continue;
         }
+        // A ScatterVectorize (masked gather) node is scheduled, and the
+        // scheduler reads its operand list at the same lane where the scalar
+        // load sits, so Scalars and the operand list must stay aligned.
+        // Record the reorder in ReorderIndices (applied by the final shuffle)
+        // instead of physically permuting the scalars, matching how a scatter
+        // node with a non-empty order is reordered above.
+        if (Gather->State == TreeEntry::ScatterVectorize) {
+          reorderOrder(Gather->ReorderIndices, Mask);
+          Visited.insert(Gather);
+          continue;
+        }
         reorderScalars(Gather->Scalars, Mask);
         Visited.insert(Gather);
       }
@@ -11929,20 +11936,11 @@ class InstructionsCompatibilityAnalysis {
            Opcode == Instruction::FDiv;
   }
 
-  /// Checks if \p I can be used as the main instruction for copyable elements
-  /// analysis, i.e. it is either a supported binary operator or a call to one
-  /// of the integer min/max intrinsics. Only the integer intrinsics qualify,
-  /// since they have a well-defined idempotent value; the FP variants do not
-  /// (NaN handling means no single value is idempotent for all inputs).
-  bool isSupportedMainOp(Instruction *I) const {
-    if (isSupportedOpcode(I->getOpcode()))
-      return true;
-    auto *CI = dyn_cast<CallInst>(I);
-    if (!CI)
-      return false;
-    Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, &TLI);
-    return ID == Intrinsic::umax || ID == Intrinsic::umin ||
-           ID == Intrinsic::smax || ID == Intrinsic::smin;
+  /// Checks if \p I can be the main op for copyable analysis: a supported
+  /// binary operator or an integer min/max intrinsic, the only call with a
+  /// well-defined idempotent value (FP min/max lacks one because of NaNs).
+  static bool isSupportedMainOp(Instruction *I) {
+    return isSupportedOpcode(I->getOpcode()) || isa<MinMaxIntrinsic>(I);
   }
 
   /// Identifies the best candidate value, which represents main opcode
@@ -12054,17 +12052,14 @@ class InstructionsCompatibilityAnalysis {
     }
   }
 
-  /// Returns the idempotent value for the \p MainOp with the detected \p
-  /// MainOpcode. For Add, returns 0. For Or, it should choose between false and
-  /// the operand itself, since V or V == V. For the min/max intrinsics, returns
-  /// the corresponding limit value (e.g. 0 for umax, since umax(V, 0) == V).
+  /// Returns the idempotent value for MainOp. For Add, returns 0. For Or, it
+  /// should choose between false and the operand itself, since V or V == V.
+  /// For the min/max intrinsics, returns the corresponding limit value (e.g. 0
+  /// for umax, since umax(V, 0) == V).
   Value *selectBestIdempotentValue() const {
     assert(isSupportedMainOp(MainOp) && "Unsupported opcode");
-    if (auto *CI = dyn_cast<CallInst>(MainOp))
-      return ConstantExpr::getIntrinsicIdentity(
-          getVectorIntrinsicIDForCall(CI, &TLI), MainOp->getType());
-    return ConstantExpr::getBinOpIdentity(MainOpcode, MainOp->getType(),
-                                          !MainOp->isCommutative());
+    return ConstantExpr::getIdentity(MainOp, MainOp->getType(),
+                                     !MainOp->isCommutative());
   }
 
   /// Returns the value and operands for the \p V, considering if it is original
@@ -12693,8 +12688,8 @@ public:
     if (S.areInstructionsWithCopyableElements()) {
       MainOp = S.getMainOp();
       MainOpcode = S.getOpcode();
-      // Use the argument count, not the raw operand count, so a call's
-      // trailing callee operand is not miscounted.
+      // Min/max is commutative, so this yields 2 args and never counts the
+      // trailing callee operand.
       const unsigned NumMainOpOperands =
           ::getNumberOfPotentiallyCommutativeOps(MainOp);
       const bool IsCommutative =
@@ -29799,9 +29794,17 @@ public:
             [](ArrayRef<Value *> RedV) {
               return RedV.size() < 2 || !allConstant(RedV) || !isSplat(RedV);
             })) {
-      for (ReductionOpsType &RdxOps : ReductionOps)
-        for (Value *RdxOp : RdxOps)
-          V.analyzedReductionRoot(cast<Instruction>(RdxOp));
+      // For ordered reductions the leaves are pulled in via the fallback in
+      // matchAssociativeReduction and may still be valid reduction roots on
+      // their own; only the root is a dead end. For unordered reductions keep
+      // marking every reduction op as analyzed.
+      if (RK == ReductionOrdering::Ordered) {
+        V.analyzedReductionRoot(cast<Instruction>(ReductionRoot));
+      } else {
+        for (ReductionOpsType &RdxOps : ReductionOps)
+          for (Value *RdxOp : RdxOps)
+            V.analyzedReductionRoot(cast<Instruction>(RdxOp));
+      }
       return nullptr;
     }
 
