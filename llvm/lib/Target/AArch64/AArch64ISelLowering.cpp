@@ -34484,11 +34484,9 @@ SDValue AArch64TargetLowering::tryLowerFPToIntToSVE(SDValue Op,
   unsigned NewOpcode;
   switch (Op.getOpcode()) {
   case ISD::FP_TO_UINT:
-  case ISD::STRICT_FP_TO_UINT:
     NewOpcode = AArch64ISD::FCVTZU_MERGE_PASSTHRU;
     break;
   case ISD::FP_TO_SINT:
-  case ISD::STRICT_FP_TO_SINT:
     NewOpcode = AArch64ISD::FCVTZS_MERGE_PASSTHRU;
     break;
   default:
@@ -34508,12 +34506,7 @@ SDValue AArch64TargetLowering::tryLowerFPToIntToSVE(SDValue Op,
     // Let common code split the operation.
     if (InVT == MVT::nxv8f32)
       return Op;
-
-    SmallVector<SDValue, 4> Operands;
-    Operands.push_back(getPredicateForVector(DAG, DL, VT));
-    Operands.push_back(Op.getOperand(0));
-    Operands.push_back(DAG.getPOISON(VT));
-    return DAG.getNode(NewOpcode, DL, VT, Operands, Op->getFlags());
+    return LowerToPredicatedOp(Op, DAG, NewOpcode);
   }
 
   bool UseSVE = !Subtarget->isNeonAvailable();
