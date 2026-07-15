@@ -1,14 +1,15 @@
 //===----------------------------------------------------------------------===//
 //
-/// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
-/// See https://llvm.org/LICENSE.txt for license information.
-/// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 /// Tests unwinding where the signal handler is a VAPI function.
 //
-/// `exit` is used as the signal handler and the unwinding is done in an atexit handler.
+/// `exit` is used as the signal handler and the unwinding is done in an atexit
+/// handler.
 /// `__builtin_debugtrap` is used because `raise` is also a VAPI function.
 
 /// REQUIRES: target={{.+}}-aix{{.*}}
@@ -55,7 +56,8 @@ void my_atexit_handler(void) {
   /// Step from `my_atexit_handler` up to `exit`.
   unw_step(&cursor);
   if (!llu_enabled)
-    fprintf(stderr, "libunwind: the next return address=VAPI_NOT_ENABLED from VAPI\n");
+    fprintf(stderr,
+            "libunwind: the next return address=VAPI_NOT_ENABLED from VAPI\n");
   /// Note:
   /// The synthetic VAPI_NOT_ENABLED output would appear _after_ the trace
   /// output indicating that the "next is a signal handler frame". Use DEBUG-DAG
@@ -75,7 +77,8 @@ void my_atexit_handler(void) {
   fprintf(stderr, "Resume `main` at the call to `trapper`.\n");
   // CHECK-LABEL: Resume `main`
   if (!llu_enabled)
-    fprintf(stderr, "libunwind: VAPI: executing return glue VAPI_NOT_ENABLED\n");
+    fprintf(stderr,
+            "libunwind: VAPI: executing return glue VAPI_NOT_ENABLED\n");
   unw_resume(&cursor);
   __builtin_unreachable();
   // DEBUG: libunwind: VAPI: executing return glue
