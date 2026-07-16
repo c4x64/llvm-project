@@ -2592,17 +2592,7 @@ private:
     bool unstructuredContext = eval.lowerAsUnstructured();
 
     mlir::Block *savedExitBlock = nullptr;
-    mlir::scf::ExecuteRegionOp wrapOp =
-        unstructuredContext ? wrapUnstructuredConstruct(eval, savedExitBlock)
-                            : nullptr;
-
-    if (wrapOp) {
-      LLVM_DEBUG({
-        llvm::dbgs() << "[wrap-unstructured] wrapped DO at ";
-        wrapOp.getLoc().print(llvm::dbgs());
-        llvm::dbgs() << "\n";
-      });
-    }
+    mlir::scf::ExecuteRegionOp wrapOp = nullptr;
 
     // If this do-loop was absorbed by a collapse clause on a parent acc.loop,
     // skip generating any loop — just lower the body.  The IV value is
@@ -2660,15 +2650,52 @@ private:
       // blocks, created in outermost to innermost order.
       return beginBlock = beginBlock->splitBlock(beginBlock->end());
     };
-    mlir::Block *headerBlock =
-        unstructuredContext ? createNextBeginBlock() : nullptr;
+    // headerBlock is computed per-branch below, after wrapping, so that
+    // beginBlock can be corrected to the scf entry when wrapping occurs.
+    mlir::Block *headerBlock = nullptr;
     mlir::Block *bodyBlock = doStmtEval.lexicalSuccessor->block;
     mlir::Block *exitBlock = doStmtEval.parentConstruct->constructExit->block;
+
+    // Helper: called after maybeStartBlock(preheaderBlock) to create the
+    // scf.execute_region (if the construct is wrappable) and then refresh
+    // beginBlock/bodyBlock/exitBlock so that all loop structure lands inside
+    // the newly created region.
+    auto maybeWrapAndRecalc = [&]() {
+      wrapOp = unstructuredContext
+                   ? wrapUnstructuredConstruct(eval, savedExitBlock)
+                   : nullptr;
+      if (wrapOp) {
+        LLVM_DEBUG({
+          llvm::dbgs() << "[wrap-unstructured] wrapped DO at ";
+          wrapOp.getLoc().print(llvm::dbgs());
+          llvm::dbgs() << "\n";
+        });
+        // After wrapping, the builder is positioned at the scf entry block.
+        // createEmptyBlocks (called inside wrapUnstructuredConstruct) may have
+        // allocated a dedicated preheader block inside the scf region and
+        // stored it in doStmtEval.block.  If so, branch to it from scf_entry
+        // and use it as beginBlock; otherwise use scf_entry directly.
+        mlir::Block *newPreheader = doStmtEval.block;
+        if (newPreheader && newPreheader != preheaderBlock) {
+          beginBlock = newPreheader;
+          maybeStartBlock(beginBlock);
+        } else {
+          beginBlock = builder->getBlock();
+        }
+        bodyBlock = doStmtEval.lexicalSuccessor->block;
+        exitBlock = doStmtEval.parentConstruct->constructExit->block;
+      }
+    };
+
     IncrementLoopNestInfo incrementLoopNestInfo;
     const Fortran::parser::ScalarLogicalExpr *whileCondition = nullptr;
     bool infiniteLoop = !loopControl.has_value();
     if (infiniteLoop) {
       assert(unstructuredContext && "infinite loop must be unstructured");
+      // Infinite loops are never wrappable; maybeWrapAndRecalc is a no-op here,
+      // but call it for uniformity so wrapOp stays null.
+      maybeWrapAndRecalc();
+      headerBlock = createNextBeginBlock();
       startBlock(headerBlock);
     } else if ((whileCondition =
                     std::get_if<Fortran::parser::ScalarLogicalExpr>(
@@ -2685,6 +2712,8 @@ private:
 
       assert(unstructuredContext && "while loop must be unstructured");
       maybeStartBlock(preheaderBlock); // no block or empty block
+      maybeWrapAndRecalc();
+      headerBlock = createNextBeginBlock();
       startBlock(headerBlock);
       genConditionalBranch(*whileCondition, bodyBlock, exitBlock);
     } else if (const auto *bounds =
@@ -2696,6 +2725,8 @@ private:
           bounds->Step());
       if (unstructuredContext) {
         maybeStartBlock(preheaderBlock);
+        maybeWrapAndRecalc();
+        headerBlock = createNextBeginBlock();
         info.hasRealControl = info.loopVariableSym->GetType()->IsNumeric(
             Fortran::common::TypeCategory::Real);
         info.headerBlock = headerBlock;
@@ -2712,6 +2743,8 @@ private:
           std::get<std::list<Fortran::parser::LocalitySpec>>(concurrent->t));
       if (unstructuredContext) {
         maybeStartBlock(preheaderBlock);
+        maybeWrapAndRecalc();
+        headerBlock = createNextBeginBlock();
         for (IncrementLoopInfo &info : incrementLoopNestInfo) {
           // The original loop body provides the body and latch blocks of the
           // innermost dimension. The (first) body block of a non-innermost
