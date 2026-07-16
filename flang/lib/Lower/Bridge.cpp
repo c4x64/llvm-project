@@ -3289,6 +3289,19 @@ private:
       return;
     }
 
+    // If our own first nested statement's block was pre-allocated by the
+    // enclosing construct (as a landing pad for its CFG to branch to; see
+    // the "wrap owns internal blocks" branch in createEmptyBlocks), start
+    // it here so our subsequent eager wrap lands inside it rather than
+    // after the enclosing cf.cond_br in a terminated block.
+    if (Fortran::lower::pft::isWrappableConstruct(eval) &&
+        eval.hasNestedEvaluations()) {
+      Fortran::lower::pft::Evaluation &firstStmt =
+          eval.getFirstNestedEvaluation();
+      if (firstStmt.block)
+        maybeStartBlock(firstStmt.block);
+    }
+
     mlir::Block *savedExitBlock = nullptr;
     mlir::scf::ExecuteRegionOp wrapOp =
         wrapUnstructuredConstruct(eval, savedExitBlock);
