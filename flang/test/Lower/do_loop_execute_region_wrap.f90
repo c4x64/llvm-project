@@ -85,9 +85,9 @@ end subroutine
 ! The set of runtime targets for `go to k` is the union of every label
 ! ASSIGN'd to k, but analyzeBranches only sees ASSIGNs earlier than the
 ! goto in program order.  Here the escaping label 99 is added by a later
-! ASSIGN and would be invisible to branchesAreInternal, so wrappability
-! bails out for any listless assigned GO TO regardless of the currently
-! recorded targets.
+! ASSIGN and would be invisible to the escape check, so wrappability bails
+! out for any listless assigned GO TO regardless of the currently recorded
+! targets.
 subroutine not_wrapped_assigned_goto_no_list(a)
   integer :: a, i, k
   assign 10 to k

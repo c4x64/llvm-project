@@ -1047,8 +1047,8 @@ private:
           },
           [&](const parser::AssignedGotoStmt &s) {
             // Mark every possible target of the assigned GO TO so that
-            // wrappability analyses (branchesAreInternal, hasIncomingBranch)
-            // can see any escape from an enclosing construct.
+            // wrappability analyses can see any escape from an enclosing
+            // construct.
             const auto &labelList = std::get<std::list<parser::Label>>(s.t);
             if (!labelList.empty()) {
               // Explicit target list: `go to v, (l1, l2, ...)`.
@@ -2396,35 +2396,67 @@ static bool isInsideConstruct(const Fortran::lower::pft::Evaluation *target,
   return false;
 }
 
-bool Fortran::lower::pft::branchesAreInternal(
-    const Fortran::lower::pft::Evaluation &construct) {
+/// Single walk of \p construct's nested evaluations that combines every
+/// wrappability check that inspects the construct's own body:
+///
+///   * branches whose target escapes \p construct — the wrap's
+///     scf.execute_region can't have out-of-region successors;
+///   * ReturnStmt — its lowering creates the function's final block in
+///     the current region, which would mis-parent the func.return;
+///   * infinite DoConstruct — its body can't reach the wrap's yield,
+///     RegionDCE would then drop the entire scf.execute_region;
+///   * listless assigned GO TO (`go to v`) — analyzeBranches only sees
+///     ASSIGNs earlier in program order, so later ASSIGNs whose labels
+///     escape \p construct would be invisible.
+///
+/// Multiway branches (computed GO TO, arithmetic IF) record only the
+/// first target in controlSuccessor; the remaining targets live in
+/// extraControlSuccessors and must be checked or an escaping branch
+/// would silently slip through.
+static bool
+hasUnwrappableInternals(const Fortran::lower::pft::Evaluation &construct) {
+  auto isInfiniteDo = [](const parser::DoConstruct *d) {
+    return d && !d->GetLoopControl().has_value();
+  };
+
+  // The construct itself must not be an infinite DO.
+  if (isInfiniteDo(construct.getIf<parser::DoConstruct>()))
+    return true;
+
+  // Preserve the prior branchesAreInternal semantics: a construct with no
+  // evaluationList is treated as not wrappable.
+  if (!construct.evaluationList)
+    return true;
+
   auto targetIsInternal = [&](const Fortran::lower::pft::Evaluation *target) {
     return isInsideConstruct(target, construct, /*strict=*/false);
   };
+
   std::function<bool(const Fortran::lower::pft::EvaluationList &)> walk =
       [&](const Fortran::lower::pft::EvaluationList &list) -> bool {
-    for (const Fortran::lower::pft::Evaluation &nested : list) {
-      if (nested.controlSuccessor && !targetIsInternal(nested.controlSuccessor))
-        return false;
+    for (const Fortran::lower::pft::Evaluation &e : list) {
+      if (e.isA<parser::ReturnStmt>())
+        return true;
 
-      // Multiway branches (computed GO TO, arithmetic IF) record only the
-      // first target in controlSuccessor; the remaining targets are held in
-      // extraControlSuccessors and must be checked here as well or an
-      // escaping branch will silently slip through.
+      if (isInfiniteDo(e.getIf<parser::DoConstruct>()))
+        return true;
+
+      if (const auto *s = e.getIf<parser::AssignedGotoStmt>())
+        if (std::get<std::list<parser::Label>>(s->t).empty())
+          return true;
+
+      if (e.controlSuccessor && !targetIsInternal(e.controlSuccessor))
+        return true;
       for (const Fortran::lower::pft::Evaluation *extra :
-           nested.extraControlSuccessors)
+           e.extraControlSuccessors)
         if (!targetIsInternal(extra))
-          return false;
+          return true;
 
-      if (nested.evaluationList && !walk(*nested.evaluationList))
-        return false;
+      if (e.evaluationList && walk(*e.evaluationList))
+        return true;
     }
-
-    return true;
-  };
-
-  if (!construct.evaluationList)
     return false;
+  };
 
   return walk(*construct.evaluationList);
 }
@@ -2463,39 +2495,6 @@ hasIncomingBranch(const Fortran::lower::pft::Evaluation &construct) {
   // TODO: This is potentially expensive and we might need to prevent running
   // this walk more than once somehow.
   return walk(funit->evaluationList);
-}
-
-/// True for a `do; end do` (no bounds, no while-condition), or for any
-/// construct that contains one. Such bodies can't reach the wrap's yield
-/// block, and the wrap has only reads/branches inside — RegionDCE then drops
-/// the whole scf.execute_region. Excluding the entire enclosing construct
-/// keeps the infinite loop visible in the parent CFG.
-static bool
-containsInfiniteDoConstruct(const Fortran::lower::pft::Evaluation &eval) {
-  auto isInfinite = [](const parser::DoConstruct *d) {
-    return d && !d->GetLoopControl().has_value();
-  };
-
-  if (isInfinite(eval.getIf<parser::DoConstruct>()))
-    return true;
-
-  if (!eval.evaluationList)
-    return false;
-
-  std::function<bool(const Fortran::lower::pft::EvaluationList &)> walk =
-      [&](const Fortran::lower::pft::EvaluationList &list) -> bool {
-    for (const Fortran::lower::pft::Evaluation &e : list) {
-      if (isInfinite(e.getIf<parser::DoConstruct>()))
-        return true;
-
-      if (e.evaluationList && walk(*e.evaluationList))
-        return true;
-    }
-
-    return false;
-  };
-
-  return walk(*eval.evaluationList);
 }
 
 /// True if \p eval is a DoConstruct driven directly into an enclosing acc.loop
@@ -2568,58 +2567,6 @@ static bool isAccLoopBody(const Fortran::lower::pft::Evaluation &eval) {
   return false;
 }
 
-/// True if any nested eval is a ReturnStmt. Its lowering creates the
-/// function's final block in the current region, which would mis-parent
-/// the func.return if that region is the wrap's.
-static bool
-containsReturnStmt(const Fortran::lower::pft::Evaluation &construct) {
-  if (!construct.evaluationList)
-    return false;
-
-  std::function<bool(const Fortran::lower::pft::EvaluationList &)> walk =
-      [&](const Fortran::lower::pft::EvaluationList &list) -> bool {
-    for (const Fortran::lower::pft::Evaluation &e : list) {
-      if (e.isA<parser::ReturnStmt>())
-        return true;
-
-      if (e.evaluationList && walk(*e.evaluationList))
-        return true;
-    }
-
-    return false;
-  };
-
-  return walk(*construct.evaluationList);
-}
-
-/// True if any nested eval is a `go to v` assigned GO TO with no explicit
-/// label list.  Its runtime targets are the union of every label ASSIGN'd
-/// to v anywhere in the function, but analyzeBranches is a single
-/// left-to-right walk and only records ASSIGNs seen before the goto, so
-/// later ASSIGNs whose labels escape the enclosing construct would be
-/// invisible to branchesAreInternal.  Bail out to keep wrapping sound.
-static bool containsListlessAssignedGoto(
-    const Fortran::lower::pft::Evaluation &construct) {
-  if (!construct.evaluationList)
-    return false;
-
-  std::function<bool(const Fortran::lower::pft::EvaluationList &)> walk =
-      [&](const Fortran::lower::pft::EvaluationList &list) -> bool {
-    for (const Fortran::lower::pft::Evaluation &e : list) {
-      if (const auto *s = e.getIf<parser::AssignedGotoStmt>())
-        if (std::get<std::list<parser::Label>>(s->t).empty())
-          return true;
-
-      if (e.evaluationList && walk(*e.evaluationList))
-        return true;
-    }
-
-    return false;
-  };
-
-  return walk(*construct.evaluationList);
-}
-
 bool Fortran::lower::pft::isWrappableConstruct(
     const Fortran::lower::pft::Evaluation &eval) {
   if (!wrapUnstructuredConstructsInExecuteRegion)
@@ -2638,8 +2585,6 @@ bool Fortran::lower::pft::isWrappableConstruct(
   // genOpenACCLoopFromDoConstruct takes over code-gen when a DoConstruct is
   // attached to an OpenACC directive. We might extend wrapping to such
   // unstructured loops later on if needed.
-  return Fortran::lower::pft::branchesAreInternal(eval) &&
-         !hasIncomingBranch(eval) && !containsReturnStmt(eval) &&
-         !containsInfiniteDoConstruct(eval) && !isAccLoopBody(eval) &&
-         !containsListlessAssignedGoto(eval);
+  return !hasUnwrappableInternals(eval) && !hasIncomingBranch(eval) &&
+         !isAccLoopBody(eval);
 }

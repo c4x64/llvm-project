@@ -33,7 +33,7 @@ subroutine simple1(y)
 end subroutine
 
 ! Same scenario but the if-construct has a GOTO exiting the construct, so
-! branchesAreInternal is false and the wrap is skipped — the original
+! the escape check fires and the wrap is skipped — the original
 ! unstructured CFG with fir.unreachable is emitted.
 !CHECK-LABEL: func.func @_QPsimple1_goto
 !CHECK-NOT:   scf.execute_region
