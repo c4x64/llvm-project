@@ -1,9 +1,12 @@
-.. title:: clang-tidy - clang-analyzer-security.PutenvStackArray
+```{title} clang-tidy - clang-analyzer-security.PutenvStackArray
+```
+
+```{eval-rst}
 .. meta::
    :http-equiv=refresh: 5;URL=https://clang.llvm.org/docs/analyzer/checkers.html#security-putenvstackarray-c
+```
 
-clang-analyzer-security.PutenvStackArray
-========================================
+# clang-analyzer-security.PutenvStackArray
 
 Finds calls to the putenv function which pass a pointer to a stack-allocated
 (automatic) array as the argument. Function putenv does not copy the passed
@@ -12,6 +15,6 @@ other threads. Content of a stack-allocated array is likely to be overwritten
 after exiting from the function.
 
 The `clang-analyzer-security.PutenvStackArray` check is an alias, please see
-`Clang Static Analyzer Available Checkers
-<https://clang.llvm.org/docs/analyzer/checkers.html#security-putenvstackarray-c>`_
+[Clang Static Analyzer Available Checkers](https://clang.llvm.org/docs/analyzer/checkers.html#security-putenvstackarray-c)
 for more information.
+
