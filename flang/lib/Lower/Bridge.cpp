@@ -2591,9 +2591,6 @@ private:
     Fortran::lower::pft::Evaluation &eval = getEval();
     bool unstructuredContext = eval.lowerAsUnstructured();
 
-    mlir::Block *savedExitBlock = nullptr;
-    mlir::scf::ExecuteRegionOp wrapOp = nullptr;
-
     // If this do-loop was absorbed by a collapse clause on a parent acc.loop,
     // skip generating any loop — just lower the body.  The IV value is
     // already available from the parent acc.loop's block argument.
@@ -2656,8 +2653,11 @@ private:
     mlir::Block *bodyBlock = doStmtEval.lexicalSuccessor->block;
     mlir::Block *exitBlock = doStmtEval.parentConstruct->constructExit->block;
 
+    mlir::Block *savedExitBlock = nullptr;
+    mlir::scf::ExecuteRegionOp wrapOp = nullptr;
+
     // Helper: called after maybeStartBlock(preheaderBlock) to create the
-    // scf.execute_region (if the construct is wrappable) and then refresh
+    // scf.execute_region (if the construct is wrappable) and then update
     // beginBlock/bodyBlock/exitBlock so that all loop structure lands inside
     // the newly created region.
     auto maybeWrapAndRecalc = [&]() {
@@ -2685,6 +2685,7 @@ private:
         bodyBlock = doStmtEval.lexicalSuccessor->block;
         exitBlock = doStmtEval.parentConstruct->constructExit->block;
       }
+      headerBlock = createNextBeginBlock();
     };
 
     IncrementLoopNestInfo incrementLoopNestInfo;
@@ -2695,7 +2696,6 @@ private:
       // Infinite loops are never wrappable; maybeWrapAndRecalc is a no-op here,
       // but call it for uniformity so wrapOp stays null.
       maybeWrapAndRecalc();
-      headerBlock = createNextBeginBlock();
       startBlock(headerBlock);
     } else if ((whileCondition =
                     std::get_if<Fortran::parser::ScalarLogicalExpr>(
@@ -2713,7 +2713,6 @@ private:
       assert(unstructuredContext && "while loop must be unstructured");
       maybeStartBlock(preheaderBlock); // no block or empty block
       maybeWrapAndRecalc();
-      headerBlock = createNextBeginBlock();
       startBlock(headerBlock);
       genConditionalBranch(*whileCondition, bodyBlock, exitBlock);
     } else if (const auto *bounds =
@@ -2726,7 +2725,6 @@ private:
       if (unstructuredContext) {
         maybeStartBlock(preheaderBlock);
         maybeWrapAndRecalc();
-        headerBlock = createNextBeginBlock();
         info.hasRealControl = info.loopVariableSym->GetType()->IsNumeric(
             Fortran::common::TypeCategory::Real);
         info.headerBlock = headerBlock;
@@ -2744,7 +2742,6 @@ private:
       if (unstructuredContext) {
         maybeStartBlock(preheaderBlock);
         maybeWrapAndRecalc();
-        headerBlock = createNextBeginBlock();
         for (IncrementLoopInfo &info : incrementLoopNestInfo) {
           // The original loop body provides the body and latch blocks of the
           // innermost dimension. The (first) body block of a non-innermost
@@ -3289,11 +3286,9 @@ private:
       return;
     }
 
-    // If our own first nested statement's block was pre-allocated by the
-    // enclosing construct (as a landing pad for its CFG to branch to; see
-    // the "wrap owns internal blocks" branch in createEmptyBlocks), start
-    // it here so our subsequent eager wrap lands inside it rather than
-    // after the enclosing cf.cond_br in a terminated block.
+    // Start a new block before generating the scf.execute_region op if needed.
+    // This avoids generating the region directly after a terminator (e.g. a
+    // conditional branch from a parent construct).
     if (Fortran::lower::pft::isWrappableConstruct(eval) &&
         eval.hasNestedEvaluations()) {
       Fortran::lower::pft::Evaluation &firstStmt =
