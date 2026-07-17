@@ -1,9 +1,10 @@
-```{title} clang-tidy - clang-analyzer-osx.coreFoundation.CFNumber
-```
+---
+myst:
+  html_meta:
+    "http-equiv=refresh": "5;URL=https://clang.llvm.org/docs/analyzer/checkers.html#osx-corefoundation-cfnumber"
+---
 
-```{eval-rst}
-.. meta::
-   :http-equiv=refresh: 5;URL=https://clang.llvm.org/docs/analyzer/checkers.html#osx-corefoundation-cfnumber
+```{title} clang-tidy - clang-analyzer-osx.coreFoundation.CFNumber
 ```
 
 # clang-analyzer-osx.coreFoundation.CFNumber
@@ -13,4 +14,3 @@ Check for proper uses of CFNumber APIs.
 The `clang-analyzer-osx.coreFoundation.CFNumber` check is an alias, please see
 [Clang Static Analyzer Available Checkers](https://clang.llvm.org/docs/analyzer/checkers.html#osx-corefoundation-cfnumber)
 for more information.
-

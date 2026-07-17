@@ -1,9 +1,10 @@
-```{title} clang-tidy - clang-analyzer-core.CallAndMessage
-```
+---
+myst:
+  html_meta:
+    "http-equiv=refresh": "5;URL=https://clang.llvm.org/docs/analyzer/checkers.html#core-callandmessage"
+---
 
-```{eval-rst}
-.. meta::
-   :http-equiv=refresh: 5;URL=https://clang.llvm.org/docs/analyzer/checkers.html#core-callandmessage
+```{title} clang-tidy - clang-analyzer-core.CallAndMessage
 ```
 
 # clang-analyzer-core.CallAndMessage
@@ -14,4 +15,3 @@ Check for logical errors for function calls and Objective-C message expressions
 The `clang-analyzer-core.CallAndMessage` check is an alias, please see
 [Clang Static Analyzer Available Checkers](https://clang.llvm.org/docs/analyzer/checkers.html#core-callandmessage)
 for more information.
-

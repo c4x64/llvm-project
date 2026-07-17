@@ -1,9 +1,10 @@
-```{title} clang-tidy - clang-analyzer-cplusplus.ArrayDelete
-```
+---
+myst:
+  html_meta:
+    "http-equiv=refresh": "5;URL=https://clang.llvm.org/docs/analyzer/checkers.html#cplusplus-arraydelete"
+---
 
-```{eval-rst}
-.. meta::
-   :http-equiv=refresh: 5;URL=https://clang.llvm.org/docs/analyzer/checkers.html#cplusplus-arraydelete
+```{title} clang-tidy - clang-analyzer-cplusplus.ArrayDelete
 ```
 
 # clang-analyzer-cplusplus.ArrayDelete
@@ -14,4 +15,3 @@ their base class.
 The `clang-analyzer-cplusplus.ArrayDelete` check is an alias, please see
 [Clang Static Analyzer Available Checkers](https://clang.llvm.org/docs/analyzer/checkers.html#cplusplus-arraydelete)
 for more information.
-

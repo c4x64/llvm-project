@@ -1,16 +1,16 @@
-```{title} clang-tidy - clang-analyzer-security.insecureAPI.bcmp
-```
+---
+myst:
+  html_meta:
+    "http-equiv=refresh": "5;URL=https://clang.llvm.org/docs/analyzer/checkers.html#security-insecureapi-bcmp"
+---
 
-```{eval-rst}
-.. meta::
-   :http-equiv=refresh: 5;URL=https://clang.llvm.org/docs/analyzer/checkers.html#security-insecureapi-bcmp
+```{title} clang-tidy - clang-analyzer-security.insecureAPI.bcmp
 ```
 
 # clang-analyzer-security.insecureAPI.bcmp
 
-Warn on uses of the 'bcmp' function.
+Warn on uses of the `bcmp` function.
 
 The `clang-analyzer-security.insecureAPI.bcmp` check is an alias, please see
 [Clang Static Analyzer Available Checkers](https://clang.llvm.org/docs/analyzer/checkers.html#security-insecureapi-bcmp)
 for more information.
-

@@ -1,9 +1,10 @@
-```{title} clang-tidy - clang-analyzer-security.SetgidSetuidOrder
-```
+---
+myst:
+  html_meta:
+    "http-equiv=refresh": "5;URL=https://clang.llvm.org/docs/analyzer/checkers.html#security-setgidsetuidorder-c"
+---
 
-```{eval-rst}
-.. meta::
-   :http-equiv=refresh: 5;URL=https://clang.llvm.org/docs/analyzer/checkers.html#security-setgidsetuidorder-c
+```{title} clang-tidy - clang-analyzer-security.SetgidSetuidOrder
 ```
 
 # clang-analyzer-security.SetgidSetuidOrder
@@ -19,4 +20,3 @@ a variable.
 The `clang-analyzer-security.SetgidSetuidOrder` check is an alias, please see
 [Clang Static Analyzer Available Checkers](https://clang.llvm.org/docs/analyzer/checkers.html#security-setgidsetuidorder-c)
 for more information.
-

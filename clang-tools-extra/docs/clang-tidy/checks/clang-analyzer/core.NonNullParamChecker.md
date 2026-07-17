@@ -1,9 +1,10 @@
-```{title} clang-tidy - clang-analyzer-core.NonNullParamChecker
-```
+---
+myst:
+  html_meta:
+    "http-equiv=refresh": "5;URL=https://clang.llvm.org/docs/analyzer/checkers.html#core-nonnullparamchecker"
+---
 
-```{eval-rst}
-.. meta::
-   :http-equiv=refresh: 5;URL=https://clang.llvm.org/docs/analyzer/checkers.html#core-nonnullparamchecker
+```{title} clang-tidy - clang-analyzer-core.NonNullParamChecker
 ```
 
 # clang-analyzer-core.NonNullParamChecker
@@ -14,4 +15,3 @@ references or marked with the 'nonnull' attribute.
 The `clang-analyzer-core.NonNullParamChecker` check is an alias, please see
 [Clang Static Analyzer Available Checkers](https://clang.llvm.org/docs/analyzer/checkers.html#core-nonnullparamchecker)
 for more information.
-

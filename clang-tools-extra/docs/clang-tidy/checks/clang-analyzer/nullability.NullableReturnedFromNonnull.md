@@ -1,9 +1,10 @@
-```{title} clang-tidy - clang-analyzer-nullability.NullableReturnedFromNonnull
-```
+---
+myst:
+  html_meta:
+    "http-equiv=refresh": "5;URL=https://clang.llvm.org/docs/analyzer/checkers.html#nullability-nullablereturnedfromnonnull"
+---
 
-```{eval-rst}
-.. meta::
-   :http-equiv=refresh: 5;URL=https://clang.llvm.org/docs/analyzer/checkers.html#nullability-nullablereturnedfromnonnull
+```{title} clang-tidy - clang-analyzer-nullability.NullableReturnedFromNonnull
 ```
 
 # clang-analyzer-nullability.NullableReturnedFromNonnull
@@ -14,4 +15,3 @@ return type.
 The `clang-analyzer-nullability.NullableReturnedFromNonnull` check is an alias, please see
 [Clang Static Analyzer Available Checkers](https://clang.llvm.org/docs/analyzer/checkers.html#nullability-nullablereturnedfromnonnull)
 for more information.
-

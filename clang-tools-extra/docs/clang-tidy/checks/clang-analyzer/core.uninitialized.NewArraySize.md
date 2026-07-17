@@ -1,9 +1,10 @@
-```{title} clang-tidy - clang-analyzer-core.uninitialized.NewArraySize
-```
+---
+myst:
+  html_meta:
+    "http-equiv=refresh": "5;URL=https://clang.llvm.org/docs/analyzer/checkers.html#core-uninitialized-newarraysize"
+---
 
-```{eval-rst}
-.. meta::
-   :http-equiv=refresh: 5;URL=https://clang.llvm.org/docs/analyzer/checkers.html#core-uninitialized-newarraysize
+```{title} clang-tidy - clang-analyzer-core.uninitialized.NewArraySize
 ```
 
 # clang-analyzer-core.uninitialized.NewArraySize
@@ -13,4 +14,3 @@ Check if the size of the array in a new[] expression is undefined.
 The `clang-analyzer-core.uninitialized.NewArraySize` check is an alias, please see
 [Clang Static Analyzer Available Checkers](https://clang.llvm.org/docs/analyzer/checkers.html#core-uninitialized-newarraysize)
 for more information.
-

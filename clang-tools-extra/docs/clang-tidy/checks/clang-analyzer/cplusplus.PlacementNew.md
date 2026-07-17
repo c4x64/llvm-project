@@ -1,9 +1,10 @@
-```{title} clang-tidy - clang-analyzer-cplusplus.PlacementNew
-```
+---
+myst:
+  html_meta:
+    "http-equiv=refresh": "5;URL=https://clang.llvm.org/docs/analyzer/checkers.html#cplusplus-placementnew"
+---
 
-```{eval-rst}
-.. meta::
-   :http-equiv=refresh: 5;URL=https://clang.llvm.org/docs/analyzer/checkers.html#cplusplus-placementnew
+```{title} clang-tidy - clang-analyzer-cplusplus.PlacementNew
 ```
 
 # clang-analyzer-cplusplus.PlacementNew
@@ -14,4 +15,3 @@ capacity.
 The `clang-analyzer-cplusplus.PlacementNew` check is an alias, please see
 [Clang Static Analyzer Available Checkers](https://clang.llvm.org/docs/analyzer/checkers.html#cplusplus-placementnew)
 for more information.
-

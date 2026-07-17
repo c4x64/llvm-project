@@ -1,9 +1,10 @@
-```{title} clang-tidy - clang-analyzer-osx.cocoa.AutoreleaseWrite
-```
+---
+myst:
+  html_meta:
+    "http-equiv=refresh": "5;URL=https://clang.llvm.org/docs/analyzer/checkers.html#osx-cocoa-autoreleasewrite"
+---
 
-```{eval-rst}
-.. meta::
-   :http-equiv=refresh: 5;URL=https://clang.llvm.org/docs/analyzer/checkers.html#osx-cocoa-autoreleasewrite
+```{title} clang-tidy - clang-analyzer-osx.cocoa.AutoreleaseWrite
 ```
 
 # clang-analyzer-osx.cocoa.AutoreleaseWrite
@@ -14,4 +15,3 @@ autoreleasing pools in Objective-C.
 The `clang-analyzer-osx.cocoa.AutoreleaseWrite` check is an alias, please see
 [Clang Static Analyzer Available Checkers](https://clang.llvm.org/docs/analyzer/checkers.html#osx-cocoa-autoreleasewrite)
 for more information.
-

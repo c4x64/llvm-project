@@ -1,9 +1,10 @@
-```{title} clang-tidy - clang-analyzer-unix.API
-```
+---
+myst:
+  html_meta:
+    "http-equiv=refresh": "5;URL=https://clang.llvm.org/docs/analyzer/checkers.html#unix-api"
+---
 
-```{eval-rst}
-.. meta::
-   :http-equiv=refresh: 5;URL=https://clang.llvm.org/docs/analyzer/checkers.html#unix-api
+```{title} clang-tidy - clang-analyzer-unix.API
 ```
 
 # clang-analyzer-unix.API
@@ -13,4 +14,3 @@ Check calls to various UNIX/Posix functions.
 The `clang-analyzer-unix.API` check is an alias, please see
 [Clang Static Analyzer Available Checkers](https://clang.llvm.org/docs/analyzer/checkers.html#unix-api)
 for more information.
-

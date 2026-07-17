@@ -1,9 +1,10 @@
-```{title} clang-tidy - clang-analyzer-optin.taint.TaintedAlloc
-```
+---
+myst:
+  html_meta:
+    "http-equiv=refresh": "5;URL=https://clang.llvm.org/docs/analyzer/checkers.html#optin-taint-taintedalloc"
+---
 
-```{eval-rst}
-.. meta::
-   :http-equiv=refresh: 5;URL=https://clang.llvm.org/docs/analyzer/checkers.html#optin-taint-taintedalloc
+```{title} clang-tidy - clang-analyzer-optin.taint.TaintedAlloc
 ```
 
 # clang-analyzer-optin.taint.TaintedAlloc
@@ -14,4 +15,3 @@ Check for memory allocations, where the size parameter might be a tainted
 The `clang-analyzer-optin.taint.TaintedAlloc` check is an alias, please see
 [Clang Static Analyzer Available Checkers](https://clang.llvm.org/docs/analyzer/checkers.html#optin-taint-taintedalloc)
 for more information.
-

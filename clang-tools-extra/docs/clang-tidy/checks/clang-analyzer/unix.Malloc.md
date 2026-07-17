@@ -1,9 +1,10 @@
-```{title} clang-tidy - clang-analyzer-unix.Malloc
-```
+---
+myst:
+  html_meta:
+    "http-equiv=refresh": "5;URL=https://clang.llvm.org/docs/analyzer/checkers.html#unix-malloc"
+---
 
-```{eval-rst}
-.. meta::
-   :http-equiv=refresh: 5;URL=https://clang.llvm.org/docs/analyzer/checkers.html#unix-malloc
+```{title} clang-tidy - clang-analyzer-unix.Malloc
 ```
 
 # clang-analyzer-unix.Malloc
@@ -14,4 +15,3 @@ managed by malloc()/free().
 The `clang-analyzer-unix.Malloc` check is an alias, please see
 [Clang Static Analyzer Available Checkers](https://clang.llvm.org/docs/analyzer/checkers.html#unix-malloc)
 for more information.
-

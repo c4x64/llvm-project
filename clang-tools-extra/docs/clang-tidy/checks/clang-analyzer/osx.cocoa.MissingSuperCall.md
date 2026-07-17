@@ -1,9 +1,10 @@
-```{title} clang-tidy - clang-analyzer-osx.cocoa.MissingSuperCall
-```
+---
+myst:
+  html_meta:
+    "http-equiv=refresh": "5;URL=https://clang.llvm.org/docs/analyzer/checkers.html#osx-cocoa-missingsupercall"
+---
 
-```{eval-rst}
-.. meta::
-   :http-equiv=refresh: 5;URL=https://clang.llvm.org/docs/analyzer/checkers.html#osx-cocoa-missingsupercall
+```{title} clang-tidy - clang-analyzer-osx.cocoa.MissingSuperCall
 ```
 
 # clang-analyzer-osx.cocoa.MissingSuperCall
@@ -13,4 +14,3 @@ Warn about Objective-C methods that lack a necessary call to super.
 The `clang-analyzer-osx.cocoa.MissingSuperCall` check is an alias, please see
 [Clang Static Analyzer Available Checkers](https://clang.llvm.org/docs/analyzer/checkers.html#osx-cocoa-missingsupercall)
 for more information.
-

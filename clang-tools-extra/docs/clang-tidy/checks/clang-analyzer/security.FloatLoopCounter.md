@@ -1,9 +1,10 @@
-```{title} clang-tidy - clang-analyzer-security.FloatLoopCounter
-```
+---
+myst:
+  html_meta:
+    "http-equiv=refresh": "5;URL=https://clang.llvm.org/docs/analyzer/checkers.html#security-floatloopcounter"
+---
 
-```{eval-rst}
-.. meta::
-   :http-equiv=refresh: 5;URL=https://clang.llvm.org/docs/analyzer/checkers.html#security-floatloopcounter
+```{title} clang-tidy - clang-analyzer-security.FloatLoopCounter
 ```
 
 # clang-analyzer-security.FloatLoopCounter
@@ -14,4 +15,3 @@ FLP30-CPP).
 The `clang-analyzer-security.FloatLoopCounter` check is an alias, please see
 [Clang Static Analyzer Available Checkers](https://clang.llvm.org/docs/analyzer/checkers.html#security-floatloopcounter)
 for more information.
-
