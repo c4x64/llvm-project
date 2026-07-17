@@ -81,6 +81,28 @@ end subroutine
 ! CHECK:         cf.cond_br
 ! CHECK:         return
 
+! Assigned GO TO with no explicit label list inside a DO: not wrapped.
+! The set of runtime targets for `go to k` is the union of every label
+! ASSIGN'd to k, but analyzeBranches only sees ASSIGNs earlier than the
+! goto in program order.  Here the escaping label 99 is added by a later
+! ASSIGN and would be invisible to branchesAreInternal, so wrappability
+! bails out for any listless assigned GO TO regardless of the currently
+! recorded targets.
+subroutine not_wrapped_assigned_goto_no_list(a)
+  integer :: a, i, k
+  assign 10 to k
+  do i = 1, 10
+    go to k
+    assign 99 to k
+10 end do
+  a = -1
+99 continue
+end subroutine
+
+! CHECK-LABEL: func.func @_QPnot_wrapped_assigned_goto_no_list
+! CHECK-NOT:     scf.execute_region
+! CHECK:         return
+
 ! A plain, structured DO with no early exits: lowered as fir.do_loop,
 ! never reaches the wrap path (the loop is not unstructured at all).
 subroutine structured(n, a)

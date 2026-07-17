@@ -2592,6 +2592,34 @@ containsReturnStmt(const Fortran::lower::pft::Evaluation &construct) {
   return walk(*construct.evaluationList);
 }
 
+/// True if any nested eval is a `go to v` assigned GO TO with no explicit
+/// label list.  Its runtime targets are the union of every label ASSIGN'd
+/// to v anywhere in the function, but analyzeBranches is a single
+/// left-to-right walk and only records ASSIGNs seen before the goto, so
+/// later ASSIGNs whose labels escape the enclosing construct would be
+/// invisible to branchesAreInternal.  Bail out to keep wrapping sound.
+static bool containsListlessAssignedGoto(
+    const Fortran::lower::pft::Evaluation &construct) {
+  if (!construct.evaluationList)
+    return false;
+
+  std::function<bool(const Fortran::lower::pft::EvaluationList &)> walk =
+      [&](const Fortran::lower::pft::EvaluationList &list) -> bool {
+    for (const Fortran::lower::pft::Evaluation &e : list) {
+      if (const auto *s = e.getIf<parser::AssignedGotoStmt>())
+        if (std::get<std::list<parser::Label>>(s->t).empty())
+          return true;
+
+      if (e.evaluationList && walk(*e.evaluationList))
+        return true;
+    }
+
+    return false;
+  };
+
+  return walk(*construct.evaluationList);
+}
+
 bool Fortran::lower::pft::isWrappableConstruct(
     const Fortran::lower::pft::Evaluation &eval) {
   if (!wrapUnstructuredConstructsInExecuteRegion)
@@ -2612,5 +2640,6 @@ bool Fortran::lower::pft::isWrappableConstruct(
   // unstructured loops later on if needed.
   return Fortran::lower::pft::branchesAreInternal(eval) &&
          !hasIncomingBranch(eval) && !containsReturnStmt(eval) &&
-         !containsInfiniteDoConstruct(eval) && !isAccLoopBody(eval);
+         !containsInfiniteDoConstruct(eval) && !isAccLoopBody(eval) &&
+         !containsListlessAssignedGoto(eval);
 }
